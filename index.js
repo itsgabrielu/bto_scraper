@@ -7,10 +7,14 @@ puppeteer.launch().then(async browser => {
     await page.select('#ViewOption',option)
     await page.click('#searchButtonId')
   }
-  const reliablyClick = async (selector) => {
-    await page.evaluate((selector) => {
-      document.querySelector(selector).click();
-    },selector)
+  const reliablyClick = async (selector, index = null) => {
+    await page.evaluate((selector,index) => {
+      if (typeof(index) === 'number') {
+        document.querySelectorAll(selector)[index].firstElementChild.click();
+      } else {
+        document.querySelector(selector).click();
+      }
+    },selector,index)
   }
   let currentURL = 'https://services2.hdb.gov.sg/webapp/BP13AWFlatAvail/BP13SEstateSummary?sel=BTO';
   page.goto(currentURL);
@@ -21,17 +25,31 @@ puppeteer.launch().then(async browser => {
     reliablyClick("tr[id*='Punggol'][id*='Room'] > td > a")
     await page.waitForSelector('#ViewOption')
     toggleAvailability(false)
-    await page.waitForSelector('#blockDetails > div:nth-child(1) > table > tbody > tr:nth-child(1) > td:nth-child(1) > div')
-    reliablyClick('#blockDetails > div:nth-child(1) > table > tbody > tr:nth-child(1) > td:nth-child(1) > div')
-    await page.waitForSelector('#blockDetails > div:nth-child(6) > table > tbody > tr:nth-child(1) > td > font')
-    let unavailableUnits = []
-    const dataRows = await page.evaluate((output)=> {
-      let rows = [...document.querySelectorAll('#blockDetails > div:nth-child(6) > table > tbody > tr')]
-      rows.forEach(row => Array.from(row.children).forEach(cell => output.push(cell.textContent.trim())))
-      return output
-    },[])
-    await browser.close();
-    console.log('dataRows',dataRows)
+    let unavailableUnits = {}
+    const blockCells = await page.evaluate(() => {
+      return document.querySelectorAll('#blockDetails > div:nth-child(1) > table > tbody > tr > td').length
+    })
+    for (let i = 0; i < blockCells; i ++) {
+      await page.waitForSelector('#blockDetails > div:nth-child(1) > table > tbody > tr > td')
+      console.log("block appeared")
+      reliablyClick('#blockDetails > div:nth-child(1) > table > tbody > tr > td', i)
+      console.log("clicked")
+      await page.waitForSelector(`#blockDetails > div:nth-child(6) > table > tbody > tr:nth-child(1) > td > font`)
+      console.log("waiting for units")
+      const shortlistedUnits = await page.evaluate(() => {
+        const blockNo = document.querySelector('#blockDetails > div:nth-child(2) > div.large-3.columns').textContent.trim()
+        const rows = [...document.querySelectorAll('#blockDetails > div:nth-child(6) > table > tbody > tr')]
+        let output = []
+        rows.forEach(row => Array.from(row.children).forEach(cell => output.push(cell.textContent.trim())))
+        return {
+          [blockNo]: {
+            'Taken': output
+          }
+        }
+      })
+      unavailableUnits = {...unavailableUnits,...shortlistedUnits}
+      console.log(unavailableUnits)
+    }
   } catch (e) {
     console.log(e)
     if (e instanceof puppeteer.errors.TimeoutError) {
