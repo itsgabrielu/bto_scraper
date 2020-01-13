@@ -18,14 +18,10 @@ puppeteer.launch().then(async browser => {
   }
   let currentURL = 'https://services2.hdb.gov.sg/webapp/BP13AWFlatAvail/BP13SEstateSummary?sel=BTO';
   page.goto(currentURL);
-  
-  try {
-    // implement steps to navigate to page listing site since it triggers script querying on click
-    await page.waitForSelector("tr[id*='Punggol'][id*='Room']")
-    reliablyClick("tr[id*='Punggol'][id*='Room'] > td > a")
-    await page.waitForSelector('#ViewOption')
-    toggleAvailability(false)
-    let unavailableUnits = {}
+  let unavailableUnits = {}
+
+  const collectUnits = async (is_available) => {
+    const key = is_available ? 'Available' : 'Taken'
     const blockCells = await page.evaluate(() => {
       return document.querySelectorAll('#blockDetails > div:nth-child(1) > table > tbody > tr > td').length
     })
@@ -36,20 +32,31 @@ puppeteer.launch().then(async browser => {
       console.log("clicked")
       await page.waitForSelector(`#blockDetails > div:nth-child(6) > table > tbody > tr:nth-child(1) > td > font`)
       console.log("waiting for units")
-      const shortlistedUnits = await page.evaluate(() => {
+      const shortlistedUnits = await page.evaluate((key) => {
         const blockNo = document.querySelector('#blockDetails > div:nth-child(2) > div.large-3.columns').textContent.trim()
         const rows = [...document.querySelectorAll('#blockDetails > div:nth-child(6) > table > tbody > tr')]
         let output = []
         rows.forEach(row => Array.from(row.children).forEach(cell => output.push(cell.textContent.trim())))
         return {
           [blockNo]: {
-            'Taken': output
+            [key]: output
           }
         }
-      })
+      },key)
       unavailableUnits = {...unavailableUnits,...shortlistedUnits}
       console.log(unavailableUnits)
     }
+  }
+  try {
+    // implement steps to navigate to page listing site since it triggers script querying on click
+    await page.waitForSelector("tr[id*='Punggol'][id*='Room']")
+    reliablyClick("tr[id*='Punggol'][id*='Room'] > td > a")
+    await page.waitForSelector('#ViewOption')
+
+    toggleAvailability(false)
+    collectUnits(false)
+    // toggleAvailability(true)
+    // collectUnits(true)
   } catch (e) {
     console.log(e)
     if (e instanceof puppeteer.errors.TimeoutError) {
