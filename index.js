@@ -23,22 +23,16 @@ puppeteer.launch({headless: true})
   let availableUnits = {}
 
   const collectUnits = async (is_available) => {
+    await toggleAvailability(is_available)
     const key = is_available ? 'Available' : 'Taken'
-    console.log('entered data collection', key)
     await page.waitForSelector('#blockDetails > div:nth-child(1) > table > tbody > tr > td')
     const blockCells = await page.evaluate(() => {
-      console.log('evaluating length', document.querySelectorAll('#blockDetails > div:nth-child(1) > table > tbody > tr > td').length)
       return document.querySelectorAll('#blockDetails > div:nth-child(1) > table > tbody > tr > td').length
     })
-    console.log('blockCells is', blockCells)
     for (let i = 0; i < blockCells; i ++) {
-      console.log("block awaiting")
       await page.waitForSelector('#blockDetails > div:nth-child(1) > table > tbody > tr > td')
-      console.log("block appeared")
       reliablyClick('#blockDetails > div:nth-child(1) > table > tbody > tr > td', i)
-      console.log("clicked")
       await page.waitForSelector(`#blockDetails > div:nth-child(6) > table > tbody > tr:nth-child(1) > td > font`)
-      console.log("waiting for units")
       const shortlistedUnits = await page.evaluate((key) => {
         const blockNo = document.querySelector('#blockDetails > div:nth-child(2) > div.large-3.columns').textContent.trim()
         const rows = key === 'Available' ? 
@@ -67,16 +61,11 @@ puppeteer.launch({headless: true})
     reliablyClick("tr[id*='Punggol'][id*='Room'] > td > a")
     await page.waitForSelector('#ViewOption')
 
-    await toggleAvailability(false)
     await collectUnits(false)
 
-    await toggleAvailability(true)
     await collectUnits(true)
   } catch (e) {
     console.log(e)
-    if (e instanceof puppeteer.errors.TimeoutError) {
-      // Do something if this is a timeout.
-    }
   }
 })
 .catch(e => console.log(e));
