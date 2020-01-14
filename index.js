@@ -45,7 +45,7 @@ puppeteer.launch({headless: true})
         [...document.querySelectorAll('#blockDetails > div:nth-child(6) > table > tbody > tr > td > font > a > font:nth-child(1)')] 
         : [...document.querySelectorAll('#blockDetails > div:nth-child(6) > table > tbody > tr > td')]
         let output = []
-        rows.forEach(row => output.push(row.textContent.trim()))
+        rows.forEach(row => output.push(row.textContent.trim().match(/\d*\-\d*/)[0]))
         return {
           [blockNo]: {
             [key]: output
