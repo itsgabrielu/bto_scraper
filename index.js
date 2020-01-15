@@ -45,7 +45,7 @@ puppeteer.launch({headless: true})
     const blockCells = await page.evaluate(() => {
       return document.querySelectorAll('#blockDetails > div:nth-child(1) > table > tbody > tr > td').length
     })
-    for (let p = 0; p < projNames.length; p ++) {
+    for (let p = 0; (projNames.length === 0 && p < 1 ) || p < projNames.length; p ++) {
       if (projNames.length < 0) {
         await toggleProject(projNames[p].value)
       }
@@ -60,16 +60,16 @@ puppeteer.launch({headless: true})
           : [...document.querySelectorAll('#blockDetails > div:nth-child(6) > table > tbody > tr > td')]
           let output = []
           rows.forEach(row => output.push(row.textContent.trim().match(/\d*\-\d*/)[0]))
+          if (projNames.length===0) {
+            return { NoProjName : { [blockNo]: { [key]: output } } } 
+          }
           return { [projNames[index].name] : { [blockNo]: { [key]: output } } }
         },key,projNames,p)
-        console.log('shortlisted are',shortlistedUnits)
         if (is_available) {
           appendToObj(availableUnits,shortlistedUnits)
         } else {
           appendToObj(unavailableUnits,shortlistedUnits)
         }
-        console.log(unavailableUnits)
-        console.log(availableUnits)
       }
     }
   }
@@ -92,6 +92,8 @@ puppeteer.launch({headless: true})
 
     await collectUnits(false)
     await collectUnits(true)
+    console.log(JSON.stringify(availableUnits))
+    console.log(JSON.stringify(unavailableUnits))
   } catch (e) {
     console.log(e)
   }
