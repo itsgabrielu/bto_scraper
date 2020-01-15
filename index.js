@@ -1,5 +1,14 @@
 const puppeteer = require('puppeteer');
 
+const appendToObj = (obj1,obj2) => {
+  const obj2Key = Object.keys(obj2)[0]
+  if (obj1.hasOwnProperty(obj2Key)) {
+    obj1[obj2Key] = {...obj1[obj2Key],...obj2[obj2Key]}
+  } else {
+    obj1[obj2Key] = obj2[obj2Key]
+  }
+}
+
 puppeteer.launch({headless: true})
 .then(async browser => {
   const page = await browser.newPage();
@@ -8,6 +17,13 @@ puppeteer.launch({headless: true})
     await page.select('#ViewOption',option)
     await page.click('#searchButtonId')
   }
+  const toggleProject = async (value) => {
+    await page.waitForSelector('#projName')
+    await page.select('#projName',value)
+    await page.click('#searchButtonId')
+  }
+  let townName = ''
+  let projNames = []
   const reliablyClick = async (selector, index = null) => {
     await page.evaluate((selector,index) => {
       if (typeof(index) === 'number') {
@@ -29,30 +45,32 @@ puppeteer.launch({headless: true})
     const blockCells = await page.evaluate(() => {
       return document.querySelectorAll('#blockDetails > div:nth-child(1) > table > tbody > tr > td').length
     })
-    for (let i = 0; i < blockCells; i ++) {
-      await page.waitForSelector('#blockDetails > div:nth-child(1) > table > tbody > tr > td')
-      reliablyClick('#blockDetails > div:nth-child(1) > table > tbody > tr > td', i)
-      await page.waitForSelector(`#blockDetails > div:nth-child(6) > table > tbody > tr:nth-child(1) > td > font`)
-      const shortlistedUnits = await page.evaluate((key) => {
-        const blockNo = document.querySelector('#blockDetails > div:nth-child(2) > div.large-3.columns').textContent.trim()
-        const rows = key === 'Available' ? 
-        [...document.querySelectorAll('#blockDetails > div:nth-child(6) > table > tbody > tr > td > font > a > font:nth-child(1)')] 
-        : [...document.querySelectorAll('#blockDetails > div:nth-child(6) > table > tbody > tr > td')]
-        let output = []
-        rows.forEach(row => output.push(row.textContent.trim().match(/\d*\-\d*/)[0]))
-        return {
-          [blockNo]: {
-            [key]: output
-          }
-        }
-      },key)
-      if (key === 'Available') {
-        availableUnits = {...availableUnits,...shortlistedUnits}
-      } else {
-        unavailableUnits = {...unavailableUnits,...shortlistedUnits}
+    for (let p = 0; p < projNames.length; p ++) {
+      if (projNames.length < 0) {
+        await toggleProject(projNames[p].value)
       }
-      console.log(unavailableUnits)
-      console.log(availableUnits)
+      for (let i = 0; i < blockCells; i ++) {
+        await page.waitForSelector('#blockDetails > div:nth-child(1) > table > tbody > tr > td')
+        reliablyClick('#blockDetails > div:nth-child(1) > table > tbody > tr > td', i)
+        await page.waitForSelector(`#blockDetails > div:nth-child(6) > table > tbody > tr:nth-child(1) > td > font`)
+        const shortlistedUnits = await page.evaluate((key,projNames,index) => {
+          const blockNo = document.querySelector('#blockDetails > div:nth-child(2) > div.large-3.columns').textContent.trim()
+          const rows = key === 'Available' ? 
+          [...document.querySelectorAll('#blockDetails > div:nth-child(6) > table > tbody > tr > td > font > a > font:nth-child(1)')] 
+          : [...document.querySelectorAll('#blockDetails > div:nth-child(6) > table > tbody > tr > td')]
+          let output = []
+          rows.forEach(row => output.push(row.textContent.trim().match(/\d*\-\d*/)[0]))
+          return { [projNames[index].name] : { [blockNo]: { [key]: output } } }
+        },key,projNames,p)
+        console.log('shortlisted are',shortlistedUnits)
+        if (is_available) {
+          appendToObj(availableUnits,shortlistedUnits)
+        } else {
+          appendToObj(unavailableUnits,shortlistedUnits)
+        }
+        console.log(unavailableUnits)
+        console.log(availableUnits)
+      }
     }
   }
   try {
@@ -60,13 +78,24 @@ puppeteer.launch({headless: true})
     await page.waitForSelector("tr[id*='Punggol'][id*='Room']")
     reliablyClick("tr[id*='Punggol'][id*='Room'] > td > a")
     await page.waitForSelector('#ViewOption')
+    townName = await page.evaluate(() => document.querySelector('#Town').value)
+    projNames = await page.evaluate(() => {
+      const projNameSelect = document.querySelector('#projName')
+      if (!projNameSelect) return []
+      return Array.from(projNameSelect.children).slice(1).map(proj =>  {
+        return { value: proj.value, name: proj.textContent }
+      })
+    })
+
+    console.log('This town is in', townName)
+    console.log('Proj name is', projNames)
 
     await collectUnits(false)
-
     await collectUnits(true)
   } catch (e) {
     console.log(e)
   }
+  browser.close()
 })
 .catch(e => console.log(e));
 
