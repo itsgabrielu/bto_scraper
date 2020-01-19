@@ -1,6 +1,13 @@
 # bto_scraper
 This app scrapes the flat unit information from the Singapore government's Housing Development Board (HDB)'s available Build-To-Order(BTO) public flat listings.
 
+To run the app:
+```
+1. Git clone into a folder of choice
+2. Navigate to folder > npm install
+3. Run > node index.js
+```
+
 For many people, a house is one of the top big-ticket items they will make in their lifetime.
 One pain point of prospective HDB buyers is to collect the available listings, among which to pick out the optimum unit for when their ballotted turn arrives. Of course, this is provided they manage to get a slot.
 
