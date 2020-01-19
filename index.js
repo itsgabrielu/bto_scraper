@@ -58,7 +58,7 @@ puppeteer.launch({headless: true})
         await page.waitForSelector(`#blockDetails > div:nth-child(1) > table > tbody > tr > td:nth-child(${i + 1}) > div`)
         reliablyClick('#blockDetails > div:nth-child(1) > table > tbody > tr > td', i)
         await page.waitForSelector(`#blockDetails > div:nth-child(6) > table > tbody > tr:nth-child(1) > td > font`)
-        const shortlistedUnits = await page.evaluate((key,projNames,index) => {
+        const shortlistedUnits = await page.evaluate((key,projNames,index,townName) => {
           const blockNo = document.querySelector('#blockDetails > div:nth-child(2) > div.large-3.columns').textContent.trim()
           const rows = key === 'Available' ? 
           [...document.querySelectorAll('#blockDetails > div:nth-child(6) > table > tbody > tr > td > font > a > font:nth-child(1)')] 
@@ -66,10 +66,10 @@ puppeteer.launch({headless: true})
           let output = []
           rows.forEach(row => output.push(row.textContent.trim().match(/\d*\-\d*/)[0]))
           if (projNames.length===0) {
-            return { NoProjName : { [blockNo]: { [key]: output } } } 
+            return { [townName] : { [blockNo]: { [key]: output } } } 
           }
           return { [projNames[index].name] : { [blockNo]: { [key]: output } } }
-        },key,projNames,p)
+        },key,projNames,p,townName)
         if (is_available) {
           appendToObj(availableUnits,shortlistedUnits)
         } else {
