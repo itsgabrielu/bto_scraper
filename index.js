@@ -14,6 +14,7 @@ puppeteer.launch({headless: true})
   const page = await browser.newPage();
   const toggleAvailability = async (availability) => {
     const option = availability ? '1' : '2'
+    await page.waitForSelector('#ViewOption')
     await page.select('#ViewOption',option)
     await page.click('#searchButtonId')
   }
@@ -27,6 +28,7 @@ puppeteer.launch({headless: true})
   const reliablyClick = async (selector, index = null) => {
     await page.evaluate((selector,index) => {
       if (typeof(index) === 'number') {
+        console.log('clicking on a a block with index', index)
         document.querySelectorAll(selector)[index].firstElementChild.click();
       } else {
         document.querySelector(selector).click();
@@ -42,15 +44,18 @@ puppeteer.launch({headless: true})
     await toggleAvailability(is_available)
     const key = is_available ? 'Available' : 'Taken'
     await page.waitForSelector('#blockDetails > div:nth-child(1) > table > tbody > tr > td')
-    const blockCells = await page.evaluate(() => {
-      return document.querySelectorAll('#blockDetails > div:nth-child(1) > table > tbody > tr > td').length
-    })
+    
     for (let p = 0; (projNames.length === 0 && p < 1 ) || p < projNames.length; p ++) {
-      if (projNames.length < 0) {
+      if (projNames.length > 0) {
         await toggleProject(projNames[p].value)
       }
+      await page.waitForSelector('#blockDetails > div:nth-child(1) > table > tbody > tr > td')
+      const blockCells = await page.evaluate(() => {
+        return document.querySelectorAll('#blockDetails > div:nth-child(1) > table > tbody > tr > td').length
+      })
+      console.log('Number of blocks available in this search filter', blockCells)
       for (let i = 0; i < blockCells; i ++) {
-        await page.waitForSelector('#blockDetails > div:nth-child(1) > table > tbody > tr > td')
+        await page.waitForSelector(`#blockDetails > div:nth-child(1) > table > tbody > tr > td:nth-child(${i + 1}) > div`)
         reliablyClick('#blockDetails > div:nth-child(1) > table > tbody > tr > td', i)
         await page.waitForSelector(`#blockDetails > div:nth-child(6) > table > tbody > tr:nth-child(1) > td > font`)
         const shortlistedUnits = await page.evaluate((key,projNames,index) => {
